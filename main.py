@@ -15,15 +15,17 @@ class Shelf(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     subject = db.Column(db.Integer, default=1)
-    books = db.relationship('Book', backref='shelf')
+    books = db.relationship('Book', back_populates='shelf')
 
 
 class Book(db.Model):
     __tablename__ = 'book'
 
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     title = db.Column(db.String, index=True)
-    shelf = db.Column(db.Integer, db.ForeignKey('shelf.id'))
+    shelf_id = db.Column(db.Integer, db.ForeignKey('shelf.id'))
+
+    shelf = db.relationship('Shelf', back_populates='books')
 
 
 @app.route('/')
