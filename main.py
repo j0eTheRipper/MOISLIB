@@ -13,17 +13,18 @@ db = SQLAlchemy(app)
 class Shelf(db.Model):
     __tablename__ = 'shelf'
 
-    id = db.Column(db.Integer, primary_key=True)
-    subject = db.Column(db.Integer, default=1)
+    id = db.Column(db.String, primary_key=True)
+    subject = db.Column(db.String)
     books = db.relationship('Book', back_populates='shelf')
 
 
 class Book(db.Model):
     __tablename__ = 'book'
 
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String, index=True)
-    shelf_id = db.Column(db.Integer, db.ForeignKey('shelf.id'))
+    count = db.Column(db.Integer, default=1)
+    shelf_id = db.Column(db.String, db.ForeignKey('shelf.id'))
 
     shelf = db.relationship('Shelf', back_populates='books')
 
