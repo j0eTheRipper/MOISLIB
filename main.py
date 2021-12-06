@@ -1,4 +1,4 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 from flask_sqlalchemy import SQLAlchemy
 from os.path import abspath, dirname, join
 
@@ -44,13 +44,16 @@ def add_books():
     return render_template('teacher/add_books.html')
 
 
-@app.route('/lend_books')
-def lend_books():
-    return render_template('teacher/lend.html')
-
-
 @app.route('/student_home')
 def student_home():
     return render_template('student/home.html')
 
 
+@app.route('/borrow')
+def borrow_get():
+    return render_template('student/borrow.html')
+
+
+@app.route('/search')
+def book_search():
+    return render_template('student/look_up.html')
