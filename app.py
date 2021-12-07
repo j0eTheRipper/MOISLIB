@@ -56,4 +56,18 @@ def borrow_get():
 
 @app.route('/search')
 def book_search():
-    return render_template('student/look_up.html')
+    user_query = request.args.get('search')
+
+    context = {
+        'book_title': '',
+        'book_shelf': '',
+    }
+
+    if user_query:
+        user_query = ' '.join(user_query.lower().split())
+        result = Book.query.filter_by(title=user_query).first()
+        if result:
+            context['book_title'] = result.title
+            context['book_shelf'] = result.shelf_id
+
+    return render_template('student/look_up.html', **context)
