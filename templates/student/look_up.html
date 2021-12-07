@@ -3,3 +3,10 @@
 	<input type="text" name="search">
 	<input type="submit" value="search">
 </form>
+
+<div>
+	{% if book_title %}
+	FOUND
+	{{ book_title }} is on {{ book_shelf }}
+	{% endif %}
+</div>
