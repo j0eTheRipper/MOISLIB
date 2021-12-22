@@ -15,6 +15,8 @@ class Shelf(db.Model):
 
     id = db.Column(db.String, primary_key=True)
     subject = db.Column(db.String)
+    number = db.Column(db.Integer)
+    book_limit = db.Column(db.Integer)
     books = db.relationship('Book', back_populates='shelf')
 
 
@@ -27,6 +29,15 @@ class Book(db.Model):
     shelf_id = db.Column(db.String, db.ForeignKey('shelf.id'))
 
     shelf = db.relationship('Shelf', back_populates='books')
+
+
+def add_book(title: str, subject):
+    title = ' '.join(title.split()).lower()  # strips-off extra spaces
+    subject_shelves = Shelf.query.filter_by(subject=subject).all()
+
+    new_shelf_name = subject[:3]
+    new_shelf_number = str(len(subject_shelves) + 1)
+    new_shelf_name += new_shelf_number
 
 
 @app.route('/')
