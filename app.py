@@ -10,34 +10,20 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 
-class Shelf(db.Model):
-    __tablename__ = 'shelf'
-
-    id = db.Column(db.String, primary_key=True)
-    subject = db.Column(db.String)
-    number = db.Column(db.Integer)
-    book_limit = db.Column(db.Integer)
-    books = db.relationship('Book', back_populates='shelf')
-
-
 class Book(db.Model):
     __tablename__ = 'book'
 
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String, index=True)
     count = db.Column(db.Integer, default=1)
-    shelf_id = db.Column(db.String, db.ForeignKey('shelf.id'))
-
-    shelf = db.relationship('Shelf', back_populates='books')
+    borrowed = db.Column(db.Boolean, default=False)
 
 
-def add_book(title: str, subject):
-    title = ' '.join(title.split()).lower()  # strips-off extra spaces
-    subject_shelves = Shelf.query.filter_by(subject=subject).all()
-
-    new_shelf_name = subject[:3]
-    new_shelf_number = str(len(subject_shelves) + 1)
-    new_shelf_name += new_shelf_number
+def add_book(title: str, count=1):
+    title = ' '.join(title.split()).title()  # strips-off extra spaces
+    book = Book(title=title, count=count)
+    db.session.add(book)
+    db.session.commit()
 
 
 @app.route('/')
@@ -82,3 +68,12 @@ def book_search():
             context['book_shelf'] = result.shelf_id
 
     return render_template('student/look_up.html', **context)
+
+
+@app.shell_context_processor
+def imports():
+    return dict(
+        db=db,
+        Book=Book,
+        add_book=add_book,
+    )
