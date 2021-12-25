@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request
 from flask_sqlalchemy import SQLAlchemy
 from os.path import abspath, dirname, join
+from datetime import date
 
 
 app = Flask(__name__)
@@ -14,9 +15,9 @@ class Book(db.Model):
     __tablename__ = 'book'
 
     id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String, index=True)
+    title = db.Column(db.String(32), unique=True, index=True)
     count = db.Column(db.Integer, default=1)
-    borrowed = db.Column(db.Boolean, default=False)
+    borrowed = db.relationship('Borrows', backref='book')
 
 
 def add_book(title: str, count=1):
@@ -24,6 +25,35 @@ def add_book(title: str, count=1):
     book = Book(title=title, count=count)
     db.session.add(book)
     db.session.commit()
+
+
+class Borrows(db.Model):
+    __tablename__ = 'borrows'
+
+    id = db.Column(db.Integer, primary_key=True)
+    borrower = db.Column(db.String(32))
+    book_title = db.Column(db.Integer, db.ForeignKey('book.title'))
+    borrow_date = db.Column(db.Date)
+    return_date = db.Column(db.Date)
+
+
+def borrow_book(book, name, borrow_date, return_date):
+    book = ' '.join(book.split()).title()
+    book = Book.query.filter_by(title=book).first()
+    name = ' '.join(name.split()).title()
+
+    if book and book.count:
+        Borrows.borrower = name
+        Borrows.book_title = book
+        Borrows.borrow_date = borrow_date
+        Borrows.return_date = return_date
+        book.count -= 1
+        db.session.add_all([self, book])
+        db.session.commit()
+    elif not book:
+        raise 'book not found.'
+    elif not book.count:
+        raise 'Out of Books!'
 
 
 @app.route('/')
@@ -74,6 +104,8 @@ def book_search():
 def imports():
     return dict(
         db=db,
-        Book=Book,
         add_book=add_book,
+        borrow_book=borrow_book,
+        Book=Book,
+        Borrows=Borrows
     )
