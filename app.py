@@ -108,8 +108,10 @@ def return_by_id(borrow_id):
 
 
 def return_(borrow):
-    borrow.book.count -= 1
+    book = borrow.book
+    book.count += 1
     db.session.delete(borrow)
+    db.session.add(book)
     db.session.commit()
 
 
