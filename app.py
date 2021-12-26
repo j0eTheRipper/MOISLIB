@@ -23,6 +23,10 @@ class OutOfBooks(BaseException):
     pass
 
 
+class BorrowNotFound(BaseException):
+    pass
+
+
 class Book(db.Model):
     __tablename__ = 'book'
 
@@ -78,6 +82,37 @@ def borrow_book(book: str, name: str, borrow_date: date, return_date: date):
         raise OutOfBooks
 
 
+def return_book(borrow_id=0, student_name=''):
+    if borrow_id:
+        return_by_id(borrow_id)
+    elif student_name:
+        return_by_student_name(student_name)
+
+
+def return_by_student_name(student_name):
+    student_name = ' '.join(student_name.split()).title()
+    borrow = Borrows.query.filter_by(student_name).first()
+    if borrow:
+        return_(borrow)
+    else:
+        raise BorrowNotFound
+
+
+def return_by_id(borrow_id):
+    borrow = Borrows.query.filter_by(id=borrow_id).first()
+
+    if borrow:
+        return_(borrow)
+    else:
+        raise BorrowNotFound
+
+
+def return_(borrow):
+    borrow.book.count -= 1
+    db.session.delete(borrow)
+    db.session.commit()
+
+
 @app.route('/')
 def home():
     return render_template('home.html')
@@ -129,5 +164,6 @@ def imports():
         add_book=add_book,
         borrow_book=borrow_book,
         Book=Book,
-        Borrows=Borrows
+        Borrows=Borrows,
+        return_book=return_book
     )
