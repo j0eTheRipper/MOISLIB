@@ -20,13 +20,6 @@ class Book(db.Model):
     borrowed = db.relationship('Borrows', backref='book')
 
 
-def add_book(title: str, count=1):
-    title = ' '.join(title.split()).title()  # strips-off extra spaces
-    book = Book(title=title, count=count)
-    db.session.add(book)
-    db.session.commit()
-
-
 class Borrows(db.Model):
     __tablename__ = 'borrows'
 
@@ -37,18 +30,29 @@ class Borrows(db.Model):
     return_date = db.Column(db.Date)
 
 
-def borrow_book(book, name, borrow_date, return_date):
+def add_book(title: str, count=1):
+    title = ' '.join(title.split()).title()
+    book = Book(title=title, count=count)
+    db.session.add(book)
+    db.session.commit()
+
+
+def borrow_book(book: Book, name: str, borrow_date: date, return_date: date):
     book = ' '.join(book.split()).title()
     book = Book.query.filter_by(title=book).first()
     name = ' '.join(name.split()).title()
 
     if book and book.count:
-        Borrows.borrower = name
-        Borrows.book_title = book
-        Borrows.borrow_date = borrow_date
-        Borrows.return_date = return_date
+        borrow = Borrows(
+            borrower=name,
+            book=book,
+            borrow_date=borrow_date,
+            return_date=return_date,
+        )
+
         book.count -= 1
-        db.session.add_all([self, book])
+
+        db.session.add_all([borrow, book])
         db.session.commit()
     elif not book:
         raise 'book not found.'
