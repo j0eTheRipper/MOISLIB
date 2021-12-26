@@ -61,8 +61,8 @@ def add_book(title: str, count=1):
 
 def borrow_book(book: str, name: str, borrow_date: date, return_date: date):
     book = ' '.join(book.split()).title()
-    book = Book.query.filter_by(title=book).first()
     name = ' '.join(name.split()).title()
+    book = Book.query.filter_by(title=book).first()
 
     if book and book.count:
         borrow = Borrows(
@@ -82,37 +82,41 @@ def borrow_book(book: str, name: str, borrow_date: date, return_date: date):
         raise OutOfBooks
 
 
-def return_book(borrow_id=0, student_name=''):
-    if borrow_id:
-        return_by_id(borrow_id)
-    elif student_name:
-        return_by_student_name(student_name)
+class Return:
+    def __init__(self, borrow_id: int = 0, student_name: str = ''):
+        self.student_name = ' '.join(student_name.split()).title() if student_name else ''
+        self.borrow_id = borrow_id
 
+        self.return_book()
 
-def return_by_student_name(student_name):
-    student_name = ' '.join(student_name.split()).title()
-    borrow = Borrows.query.filter_by(student_name).first()
-    if borrow:
-        return_(borrow)
-    else:
-        raise BorrowNotFound
+    def return_book(self):
+        if self.borrow_id:
+            self.return_by_id()
+        elif self.student_name:
+            self.return_by_student_name()
 
+    def return_by_student_name(self):
+        borrow = Borrows.query.filter_by(borrower=self.student_name).first()
+        if borrow:
+            self.return_(borrow)
+        else:
+            raise BorrowNotFound
 
-def return_by_id(borrow_id):
-    borrow = Borrows.query.filter_by(id=borrow_id).first()
+    def return_by_id(self):
+        borrow = Borrows.query.filter_by(id=self.borrow_id).first()
 
-    if borrow:
-        return_(borrow)
-    else:
-        raise BorrowNotFound
+        if borrow:
+            self.return_(borrow)
+        else:
+            raise BorrowNotFound
 
-
-def return_(borrow):
-    book = borrow.book
-    book.count += 1
-    db.session.delete(borrow)
-    db.session.add(book)
-    db.session.commit()
+    @staticmethod
+    def return_(borrow):
+        book = borrow.book
+        book.count += 1
+        db.session.add(book)
+        db.session.delete(borrow)
+        db.session.commit()
 
 
 @app.route('/')
@@ -167,5 +171,5 @@ def imports():
         borrow_book=borrow_book,
         Book=Book,
         Borrows=Borrows,
-        return_book=return_book
+        Return=Return,
     )
