@@ -11,6 +11,18 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 
+class BookExists(BaseException):
+    pass
+
+
+class BookNotFound(BaseException):
+    pass
+
+
+class OutOfBooks(BaseException):
+    pass
+
+
 class Book(db.Model):
     __tablename__ = 'book'
 
@@ -32,12 +44,18 @@ class Borrows(db.Model):
 
 def add_book(title: str, count=1):
     title = ' '.join(title.split()).title()
-    book = Book(title=title, count=count)
-    db.session.add(book)
-    db.session.commit()
+    book_exists = Book.query.filter_by(title=title).first()
+
+    if not book_exists:
+        book = Book(title=title, count=count)
+
+        db.session.add(book)
+        db.session.commit()
+    else:
+        raise BookExists
 
 
-def borrow_book(book: Book, name: str, borrow_date: date, return_date: date):
+def borrow_book(book: str, name: str, borrow_date: date, return_date: date):
     book = ' '.join(book.split()).title()
     book = Book.query.filter_by(title=book).first()
     name = ' '.join(name.split()).title()
@@ -55,9 +73,9 @@ def borrow_book(book: Book, name: str, borrow_date: date, return_date: date):
         db.session.add_all([borrow, book])
         db.session.commit()
     elif not book:
-        raise 'book not found.'
+        raise BookNotFound
     elif not book.count:
-        raise 'Out of Books!'
+        raise OutOfBooks
 
 
 @app.route('/')
