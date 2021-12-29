@@ -1,5 +1,6 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, url_for, redirect, abort
 from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 from os.path import abspath, dirname, join
 from datetime import date
 
@@ -8,7 +9,9 @@ app = Flask(__name__)
 BASE_DIR = abspath(dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{join(BASE_DIR, "db.sqlite")}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SECRET_KEY'] = 'JAOSIUE8U903820ISKDJF'
 db = SQLAlchemy(app)
+migrate = Migrate(app, db)
 
 
 class BookExists(BaseException):
@@ -27,6 +30,10 @@ class BorrowNotFound(BaseException):
     pass
 
 
+class ReturnFirst(BaseException):
+    pass
+
+
 class Book(db.Model):
     __tablename__ = 'book'
 
@@ -40,9 +47,9 @@ class Borrows(db.Model):
     __tablename__ = 'borrows'
 
     id = db.Column(db.Integer, primary_key=True)
-    borrower = db.Column(db.String(32))
+    borrower = db.Column(db.String(32), unique=True, index=True)
     book_title = db.Column(db.Integer, db.ForeignKey('book.title'))
-    borrow_date = db.Column(db.Date)
+    borrow_date = db.Column(db.Date, default=date.today())
     return_date = db.Column(db.Date)
 
 
@@ -59,12 +66,13 @@ def add_book(title: str, count=1):
         raise BookExists
 
 
-def borrow_book(book: str, name: str, borrow_date: date, return_date: date):
+def borrow_book(book: str, name: str, return_date: date, borrow_date: date = date.today()):
     book = ' '.join(book.split()).title()
     name = ' '.join(name.split()).title()
     book = Book.query.filter_by(title=book).first()
+    name_exists = bool(Borrows.query.filter_by(borrower=name).first())
 
-    if book and book.count:
+    if book and book.count and not name_exists:
         borrow = Borrows(
             borrower=name,
             book=book,
@@ -80,6 +88,8 @@ def borrow_book(book: str, name: str, borrow_date: date, return_date: date):
         raise BookNotFound
     elif not book.count:
         raise OutOfBooks
+    elif name_exists:
+        raise ReturnFirst
 
 
 class Return:
@@ -124,24 +134,43 @@ def home():
     return render_template('home.html')
 
 
-@app.route('/teacher_home')
-def manage_books():
-    return render_template('teacher/home.html')
+@app.route('/add_book')
+def add_book_get():
+    return render_template('add_book.html')
 
 
-@app.route('/add_books')
-def add_books():
-    return render_template('teacher/add_books.html')
-
-
-@app.route('/student_home')
-def student_home():
-    return render_template('student/home.html')
+@app.route('/add_book', methods=['POST'])
+def add_book_post():
+    title = request.form.get('title')
+    count = int(request.form.get('count'))
+    try:
+        add_book(title, count)
+    except BookExists:
+        abort(406)
+    return redirect(url_for('home'))
 
 
 @app.route('/borrow')
 def borrow_get():
-    return render_template('student/borrow.html')
+    return render_template('borrow.html')
+
+
+@app.route('/borrow', methods=['POST'])
+def borrow_post():
+    book = request.form.get('book')
+    name = request.form.get('student_name')
+    return_date = request.form.get('return_date')
+    return_date = [int(i) for i in return_date.split('-')]
+    return_date = date(*return_date)
+
+    try:
+        borrow_book(book, name, return_date)
+    except OutOfBooks:
+        return '<h1> Out of that book </h1>'
+    except ReturnFirst:
+        return '<h1> Return the book you last borrowed </h1>'
+
+    return redirect(url_for('home'))
 
 
 @app.route('/search')
@@ -160,7 +189,12 @@ def book_search():
             context['book_title'] = result.title
             context['book_shelf'] = result.shelf_id
 
-    return render_template('student/look_up.html', **context)
+    return render_template('search.html', **context)
+
+
+@app.errorhandler(406)
+def handle_406(err):
+    return render_template('book_exists.html'), 406
 
 
 @app.shell_context_processor
