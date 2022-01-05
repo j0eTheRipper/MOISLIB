@@ -48,7 +48,7 @@ class Borrows(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     borrower = db.Column(db.String(32), unique=True, index=True)
-    book_title = db.Column(db.Integer, db.ForeignKey('book.title'))
+    book_title = db.Column(db.String, db.ForeignKey('book.title'))
     borrow_date = db.Column(db.Date, default=date.today())
     return_date = db.Column(db.Date)
 
@@ -131,7 +131,8 @@ class Return:
 
 @app.route('/')
 def home():
-    return render_template('home.html')
+    obj = request.args
+    return render_template('home.html', **obj)
 
 
 @app.route('/add_book')
@@ -146,8 +147,8 @@ def add_book_post():
     try:
         add_book(title, count)
     except BookExists:
-        abort(406)
-    return redirect(url_for('home'))
+        return '<h1>That book is already added</h1>'
+    return redirect(url_for('home', added_book=True))
 
 
 @app.route('/borrow')
@@ -173,6 +174,29 @@ def borrow_post():
     return redirect(url_for('home'))
 
 
+@app.route('/return')
+def return_book_get():
+    return render_template('return.html')
+
+
+@app.route('/return', methods=['POST'])
+def return_book_post():
+    borrower = request.form.get('borrower')
+    borrow_id = request.form.get('borrow_id')
+    # book = request.form.get('book_title')
+
+    try:
+        if borrower:
+            Return(student_name=borrower)
+        elif borrow_id:
+            borrow_id = int(borrow_id)
+            Return(borrow_id=borrow_id)
+    except BorrowNotFound:
+        return '<h1>Wrong! You might have typo there.</h1>'
+    else:
+        return redirect(url_for('home'))
+
+
 @app.route('/search')
 def book_search():
     user_query = request.args.get('search')
@@ -190,11 +214,6 @@ def book_search():
             context['book_shelf'] = result.shelf_id
 
     return render_template('search.html', **context)
-
-
-@app.errorhandler(406)
-def handle_406(err):
-    return render_template('book_exists.html'), 406
 
 
 @app.shell_context_processor
