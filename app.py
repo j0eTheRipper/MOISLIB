@@ -34,13 +34,25 @@ class ReturnFirst(BaseException):
     pass
 
 
+class SubjectNotFound(BaseException):
+    pass
+
+
+class Subjects(db.Model):
+    __tablename__ = 'subjects'
+
+    subject = db.Column(db.String, primary_key=True)
+    books = db.relationship('Book', backref='subject', uselist=True)
+
+
 class Book(db.Model):
     __tablename__ = 'book'
 
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(32), unique=True, index=True)
+    book_subject = db.Column(db.String, db.ForeignKey('subjects.subject'))
     count = db.Column(db.Integer, default=1)
-    borrowed = db.relationship('Borrows', backref='book')
+    borrowed = db.relationship('Borrows', backref='book', uselist=False)
 
 
 class Borrows(db.Model):
@@ -53,12 +65,17 @@ class Borrows(db.Model):
     return_date = db.Column(db.Date)
 
 
-def add_book(title: str, count=1):
+def add_book(title: str, count=1, subject=None):
     title = ' '.join(title.split()).title()
     book_exists = Book.query.filter_by(title=title).first()
 
     if not book_exists:
-        book = Book(title=title, count=count)
+        subject = Subjects.query.filter_by(subject=subject).first()
+
+        if subject:
+            book = Book(title=title, count=count, subject=subject)
+        else:
+            raise SubjectNotFound
 
         db.session.add(book)
         db.session.commit()
