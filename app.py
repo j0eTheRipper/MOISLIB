@@ -11,7 +11,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{join(BASE_DIR, "db.sqlite")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = 'JAOSIUE8U903820ISKDJF'
 db = SQLAlchemy(app)
-migrate = Migrate(app, db)
+migrate = Migrate(app, db, render_as_batch=True)
 
 
 class BookExists(BaseException):
@@ -52,6 +52,7 @@ class Book(db.Model):
     title = db.Column(db.String(32), unique=True, index=True)
     book_subject = db.Column(db.String, db.ForeignKey('subjects.subject'))
     count = db.Column(db.Integer, default=1)
+    is_borrowed = db.Column(db.Boolean, default=False, nullable=False)
     borrowed = db.relationship('Borrows', backref='book', uselist=False)
 
 
@@ -98,6 +99,7 @@ def borrow_book(book: str, name: str, return_date: date, borrow_date: date = dat
         )
 
         book.count -= 1
+        book.is_borrowed = True
 
         db.session.add_all([borrow, book])
         db.session.commit()
@@ -141,6 +143,7 @@ class Return:
     def return_(borrow):
         book = borrow.book
         book.count += 1
+        book.is_borrowed = False
         db.session.add(book)
         db.session.delete(borrow)
         db.session.commit()
@@ -216,21 +219,33 @@ def return_book_post():
 
 @app.route('/search')
 def book_search():
-    user_query = request.args.get('search')
+    subject_query = request.args.get('subject')
+    show_0 = request.args.get('only_available')
+    subjects_list = Subjects.query.all()
 
     context = {
-        'book_title': '',
-        'book_shelf': '',
+        'subjects': [subject.subject for subject in subjects_list],
+        'results': None,
     }
 
-    if user_query:
-        user_query = ' '.join(user_query.lower().split())
-        result = Book.query.filter_by(title=user_query).first()
-        if result:
-            context['book_title'] = result.title
-            context['book_shelf'] = result.shelf_id
+    query = generate_query(show_0, subject_query)
+    query_result = db.engine.execute(query).all()
+    context['results'] = query_result
 
     return render_template('search.html', **context)
+
+
+def generate_query(show_0, subject_query):
+    query = 'SELECT title, book_subject, count, is_borrowed FROM book '
+
+    if subject_query != 'all':
+        query += f'WHERE book_subject = "{subject_query}" '
+        if show_0:
+            query += 'AND count > 0'
+    elif show_0:
+        query += 'WHERE count > 0'
+
+    return query
 
 
 @app.shell_context_processor
