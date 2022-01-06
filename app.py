@@ -230,6 +230,7 @@ def book_search():
 
     query = generate_query(show_0, subject_query)
     query_result = db.engine.execute(query).all()
+    print(query)
     context['results'] = query_result
 
     return render_template('search.html', **context)
@@ -238,7 +239,7 @@ def book_search():
 def generate_query(show_0, subject_query):
     query = 'SELECT title, book_subject, count, is_borrowed FROM book '
 
-    if subject_query != 'all':
+    if subject_query:
         query += f'WHERE book_subject = "{subject_query}" '
         if show_0:
             query += 'AND count > 0'

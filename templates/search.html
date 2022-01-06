@@ -1,6 +1,6 @@
 <form action="/search" method="get">
     <select name="subject" id="subject">
-        <option value="all">all.</option>
+        <option value="">all</option>
         {% for subject in subjects %}
             <option value="{{ subject }}">{{ subject }}</option>
         {% endfor %}
@@ -23,7 +23,11 @@
                 <td>{{ title }}</td>
                 <td>{{ subject }}</td>
                 <td>{{ count }}</td>
-                <td>{{ is_borrowed }}</td>
+                {% if is_borrowed %}
+                    <td>yes</td>
+                {% else %}
+                    <td>no</td>
+                {% endif %}
             </tr>
        {% endfor %} 
     </table>
