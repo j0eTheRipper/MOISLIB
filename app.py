@@ -52,7 +52,6 @@ class Book(db.Model):
     title = db.Column(db.String(32), unique=True, index=True)
     book_subject = db.Column(db.String, db.ForeignKey('subjects.subject'))
     count = db.Column(db.Integer, default=1)
-    is_borrowed = db.Column(db.Boolean, default=False, nullable=False)
     borrowed = db.relationship('Borrows', backref='book', uselist=False)
 
 
@@ -237,7 +236,7 @@ def book_search():
 
 
 def generate_query(show_0, subject_query):
-    query = 'SELECT title, book_subject, count, is_borrowed FROM book '
+    query = 'SELECT title, book_subject, count FROM book '
 
     if subject_query:
         query += f'WHERE book_subject = "{subject_query}" '

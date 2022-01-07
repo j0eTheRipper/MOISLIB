@@ -16,18 +16,12 @@
         <th>Book Title</th>
         <th>Subject</th>
         <th>available qty</th>
-        <th>borrowed</th>
 
-       {% for title, subject, count, is_borrowed in results %}
+       {% for title, subject, count in results %}
             <tr>
                 <td>{{ title }}</td>
                 <td>{{ subject }}</td>
                 <td>{{ count }}</td>
-                {% if is_borrowed %}
-                    <td>yes</td>
-                {% else %}
-                    <td>no</td>
-                {% endif %}
             </tr>
        {% endfor %} 
     </table>
