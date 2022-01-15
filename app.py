@@ -165,10 +165,18 @@ def add_book_get():
 def add_book_post():
     title = request.form.get('title')
     count = int(request.form.get('count'))
+    subject = request.form.get('subject').capitalize()
+    print(subject)
     try:
-        add_book(title, count)
+        add_book(title, count, subject)
     except BookExists:
         return '<h1>That book is already added</h1>'
+    except SubjectNotFound:
+        subject_record = Subjects(subject=subject)
+        db.session.add(subject_record)
+        db.session.commit()
+        add_book(title, count, subject)  # just for the debug
+
     return redirect(url_for('home', added_book=True))
 
 
