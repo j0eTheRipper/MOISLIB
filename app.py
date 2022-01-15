@@ -102,6 +102,8 @@ def borrow_book(book: str, name: str, return_date: date, borrow_date: date = dat
 
         db.session.add_all([borrow, book])
         db.session.commit()
+
+        return {'name_registered': borrow.borrower, 'borrow_id': borrow.id, 'book': borrow.book_title}
     elif not book:
         raise BookNotFound
     elif not book.count:
@@ -184,13 +186,13 @@ def borrow_post():
     return_date = date(*return_date)
 
     try:
-        borrow_book(book, name, return_date)
+        borrow_info = borrow_book(book, name, return_date)
+        return redirect(url_for('home', **borrow_info))
     except OutOfBooks:
         return '<h1> Out of that book </h1>'
     except ReturnFirst:
         return '<h1> Return the book you last borrowed </h1>'
 
-    return redirect(url_for('home'))
 
 
 @app.route('/return')

@@ -5,6 +5,11 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MOIS Library</title>
+    <style>
+        .alert {
+            color: red;
+        }
+    </style>
 </head>
 <body>
     <h1>Welcome to MOIS library</h1>
@@ -14,7 +19,10 @@
 
     <div class='container success'>
         {% if added_book %}
-            <h3>successfully added a new book</h3>
+            <h3 class="alert">successfully added a new book</h3>
+        
+        {% elif name_registered and borrow_id and book %}
+            <h3 class="alert">{{name_registered}} borrowed {{book}} with borrow id of {{borrow_id}}</h3>
         {% endif %}
     </div>
 </body>
