@@ -1,0 +1,18 @@
+<table border="1" cellpadding="2" cellspacing="2">
+    <th>Student</th>
+    <th>Class</th>
+    <th>Librarian</th>
+    <th>Book</th>
+    <th>Date Borrowed</th>
+    <th>Return Date</th>
+    {% for borrow in borrows %}
+    <tr>
+        <td>{{ borrow.borrower }}</td>
+        <td>{{ borrow.borrower_class }}</td>
+        <td>{{ borrow.librarian }}</td>
+        <td>{{ borrow.book_title }}</td>
+        <td>{{ borrow.borrow_date }}</td>
+        <td>{{ borrow.return_date }}</td>
+    </tr>
+    {% endfor %}
+</table>

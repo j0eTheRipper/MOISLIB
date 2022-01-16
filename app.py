@@ -1,6 +1,8 @@
+from random import choices
 from flask import Flask, render_template, request, url_for, redirect, abort
 from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
+from flask_wtf import FlaskForm
+from wtforms.fields import SelectField, SubmitField
 from os.path import abspath, dirname, join
 from datetime import date
 
@@ -11,7 +13,6 @@ app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{join(BASE_DIR, "db.sqlite")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = 'JAOSIUE8U903820ISKDJF'
 db = SQLAlchemy(app)
-migrate = Migrate(app, db, render_as_batch=True)
 
 
 class BookExists(BaseException):
@@ -38,6 +39,7 @@ class SubjectNotFound(BaseException):
     pass
 
 
+
 class Subjects(db.Model):
     __tablename__ = 'subjects'
 
@@ -60,7 +62,9 @@ class Borrows(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     borrower = db.Column(db.String(32), unique=True, index=True)
+    borrower_class = db.Column(db.String(4))
     book_title = db.Column(db.String, db.ForeignKey('book.title'))
+    librarian = db.Column(db.String)
     borrow_date = db.Column(db.Date, default=date.today())
     return_date = db.Column(db.Date)
 
@@ -83,9 +87,10 @@ def add_book(title: str, count=1, subject=None):
         raise BookExists
 
 
-def borrow_book(book: str, name: str, return_date: date, borrow_date: date = date.today()):
+def borrow_book(book: str, name: str, return_date: date, student_class:str, librarian:str):
     book = ' '.join(book.split()).title()
     name = ' '.join(name.split()).title()
+    librarian = ' '.join(librarian.split()).title()
     book = Book.query.filter_by(title=book).first()
     name_exists = bool(Borrows.query.filter_by(borrower=name).first())
 
@@ -93,8 +98,9 @@ def borrow_book(book: str, name: str, return_date: date, borrow_date: date = dat
         borrow = Borrows(
             borrower=name,
             book=book,
-            borrow_date=borrow_date,
             return_date=return_date,
+            borrower_class=student_class,
+            librarian=librarian,
         )
 
         book.count -= 1
@@ -175,14 +181,14 @@ def add_book_post():
         subject_record = Subjects(subject=subject)
         db.session.add(subject_record)
         db.session.commit()
-        add_book(title, count, subject)  # just for the debug
+        add_book(title, count, subject)
 
     return redirect(url_for('home', added_book=True))
 
 
-@app.route('/borrow')
-def borrow_get():
-    return render_template('borrow.html')
+@app.route('/borrow/<title>')
+def borrow_get(title=None):
+    return render_template('borrow.html', title=title)
 
 
 @app.route('/borrow', methods=['POST'])
@@ -190,11 +196,13 @@ def borrow_post():
     book = request.form.get('book')
     name = request.form.get('student_name')
     return_date = request.form.get('return_date')
+    student_class = request.form.get('student_class')
+    librarian = request.form.get('librarian')
     return_date = [int(i) for i in return_date.split('-')]
     return_date = date(*return_date)
 
     try:
-        borrow_info = borrow_book(book, name, return_date)
+        borrow_info = borrow_book(book, name, return_date, student_class, librarian)
         return redirect(url_for('home', **borrow_info))
     except OutOfBooks:
         return '<h1> Out of that book </h1>'
@@ -239,11 +247,15 @@ def book_search():
 
     query = generate_query(show_0, subject_query)
     query_result = db.engine.execute(query).all()
-    print(query)
     context['results'] = query_result
 
     return render_template('search.html', **context)
 
+
+@app.route('/view_borrows')
+def view_borrows():
+    borrows = Borrows.query.all()
+    return render_template('view_borowed.html', borrows=borrows)
 
 def generate_query(show_0, subject_query):
     query = 'SELECT title, book_subject, count FROM book '

@@ -10,9 +10,15 @@
 <body>
 <h1>borrow a book</h1>
 <form action="/borrow" method="post">
-    <input type="text" name="book" id="book" placeholder="book title"><br>
+    {% if not title %}
+        <input type="text" name="book" id="book" placeholder="book title"><br>
+    {% else %}
+        <input type="text" name="book" id="book" value="{{ title }}"><br>  
+    {% endif %}
     <input type="date" name="return_date" id="return_date" placeholder="return date"><br>
-    <input type="text" name="student_name" id="student_name" placeholder="student name"><br>
+    <input type="text" name="student_name" id="student_name" placeholder="student name">
+    <input type="text" name="student_class" id="student_class" placeholder="class"><br>
+    <input type="text" name="librarian" id="librarian" placeholder="librarian">
     <input type="submit" value="borrow">
 </form>
 </body>
