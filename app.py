@@ -27,10 +27,6 @@ class OutOfBooks(BaseException):
     pass
 
 
-class BorrowNotFound(BaseException):
-    pass
-
-
 class ReturnFirst(BaseException):
     pass
 
@@ -61,12 +57,13 @@ class Borrows(db.Model):
     __tablename__ = 'borrows'
 
     id = db.Column(db.Integer, primary_key=True)
-    borrower = db.Column(db.String(32), unique=True, index=True)
+    borrower = db.Column(db.String(32), index=True)
     borrower_class = db.Column(db.String(4))
     book_title = db.Column(db.String, db.ForeignKey('book.title'))
     librarian = db.Column(db.String)
     borrow_date = db.Column(db.Date, default=date.today())
     return_date = db.Column(db.Date)
+    is_returned = db.Column(db.Boolean, default=False)
 
 
 def add_book(title: str, count=1, subject=None):
@@ -92,9 +89,10 @@ def borrow_book(book: str, name: str, return_date: date, student_class:str, libr
     name = ' '.join(name.split()).title()
     librarian = ' '.join(librarian.split()).title()
     book = Book.query.filter_by(title=book).first()
-    name_exists = bool(Borrows.query.filter_by(borrower=name).first())
+    borrower = Borrows.query.filter_by(borrower=name).first()
+    is_returned = True if borrower is None else borrower.is_returned
 
-    if book and book.count and not name_exists:
+    if book and book.count and is_returned:
         borrow = Borrows(
             borrower=name,
             book=book,
@@ -104,7 +102,6 @@ def borrow_book(book: str, name: str, return_date: date, student_class:str, libr
         )
 
         book.count -= 1
-        book.is_borrowed = True
 
         db.session.add_all([borrow, book])
         db.session.commit()
@@ -114,46 +111,21 @@ def borrow_book(book: str, name: str, return_date: date, student_class:str, libr
         raise BookNotFound
     elif not book.count:
         raise OutOfBooks
-    elif name_exists:
+    elif not is_returned:
         raise ReturnFirst
 
 
-class Return:
-    def __init__(self, borrow_id: int = 0, student_name: str = ''):
-        self.student_name = ' '.join(student_name.split()).title() if student_name else ''
-        self.borrow_id = borrow_id
+def return_book(borrow_id: int):
+    borrow = Borrows.query.filter_by(id=borrow_id).first()
 
-        self.return_book()
+    book = borrow.book
+    book.count += 1
+    db.session.add(book)
 
-    def return_book(self):
-        if self.borrow_id:
-            self.return_by_id()
-        elif self.student_name:
-            self.return_by_student_name()
+    borrow.is_returned = True
+    db.session.add(borrow)
 
-    def return_by_student_name(self):
-        borrow = Borrows.query.filter_by(borrower=self.student_name).first()
-        if borrow:
-            self.return_(borrow)
-        else:
-            raise BorrowNotFound
-
-    def return_by_id(self):
-        borrow = Borrows.query.filter_by(id=self.borrow_id).first()
-
-        if borrow:
-            self.return_(borrow)
-        else:
-            raise BorrowNotFound
-
-    @staticmethod
-    def return_(borrow):
-        book = borrow.book
-        book.count += 1
-        book.is_borrowed = False
-        db.session.add(book)
-        db.session.delete(borrow)
-        db.session.commit()
+    db.session.commit()
 
 
 @app.route('/')
@@ -211,27 +183,15 @@ def borrow_post():
 
 
 
-@app.route('/return')
-def return_book_get():
-    return render_template('return.html')
+@app.route('/return/<int:return_id>')
+def return_book_get(return_id):
+    return return_book_post(return_id)
 
 
 @app.route('/return', methods=['POST'])
-def return_book_post():
-    borrower = request.form.get('borrower')
-    borrow_id = request.form.get('borrow_id')
-    # book = request.form.get('book_title')
-
-    try:
-        if borrower:
-            Return(student_name=borrower)
-        elif borrow_id:
-            borrow_id = int(borrow_id)
-            Return(borrow_id=borrow_id)
-    except BorrowNotFound:
-        return '<h1>Wrong! You might have typo there.</h1>'
-    else:
-        return redirect(url_for('home'))
+def return_book_post(borrow_id):
+    return_book(borrow_id=borrow_id)
+    return redirect(url_for('view_borrows'))
 
 
 @app.route('/search')
@@ -278,5 +238,5 @@ def imports():
         borrow_book=borrow_book,
         Book=Book,
         Borrows=Borrows,
-        Return=Return,
+        Return=return_book,
     )
