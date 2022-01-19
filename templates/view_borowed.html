@@ -8,6 +8,10 @@
             color: green;
         }
     </style>
+    {% if borrows %}
+    <form action="/view_borrows" method="get">
+        <input type="submit" name="returned" value="unreturned">
+    </form>
     <table border="1" cellpadding="2" cellspacing="2">
         <th>Student</th>
         <th>Class</th>
@@ -32,4 +36,7 @@
         </tr>
         {% endfor %}
     </table>
+    {% else %}
+    <h2>No borrows yet!!</h2>
+    {% endif %}
 {% endblock %}

@@ -50,7 +50,7 @@ class Book(db.Model):
     title = db.Column(db.String(32), unique=True, index=True)
     book_subject = db.Column(db.String, db.ForeignKey('subjects.subject'))
     count = db.Column(db.Integer, default=1)
-    borrowed = db.relationship('Borrows', backref='book', uselist=False)
+    borrowed = db.relationship('Borrows', backref='book')
 
 
 class Borrows(db.Model):
@@ -106,7 +106,7 @@ def borrow_book(book: str, name: str, return_date: date, student_class:str, libr
         db.session.add_all([borrow, book])
         db.session.commit()
 
-        return {'name_registered': borrow.borrower, 'borrow_id': borrow.id, 'book': borrow.book_title}
+        return borrow.id
     elif not book:
         raise BookNotFound
     elif not book.count:
@@ -175,7 +175,7 @@ def borrow_post():
 
     try:
         borrow_info = borrow_book(book, name, return_date, student_class, librarian)
-        return redirect(url_for('home', **borrow_info))
+        return redirect(url_for('view_borrows', borrow_id=borrow_info))
     except OutOfBooks:
         return '<h1> Out of that book </h1>'
     except ReturnFirst:
@@ -214,8 +214,14 @@ def book_search():
 
 @app.route('/view_borrows')
 def view_borrows():
-    borrows = Borrows.query.all()
-    return render_template('view_borowed.html', borrows=borrows)
+    filter = request.args.get('returned')
+    borrow_id = request.args.get('borrow_id')
+    print(filter)
+    if filter:
+        borrows = Borrows.query.filter_by(is_returned=False).all()
+    else:
+        borrows = Borrows.query.all()
+    return render_template('view_borowed.html', borrows=borrows, borrow_id=borrow_id)
 
 def generate_query(show_0, subject_query):
     query = 'SELECT title, book_subject, count FROM book '
