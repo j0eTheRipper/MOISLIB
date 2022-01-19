@@ -1,31 +1,37 @@
-<form action="/search" method="get">
-    <select name="subject" id="subject">
-        <option value="">all</option>
-        {% for subject in subjects %}
-            <option value="{{ subject }}">{{ subject }}</option>
-        {% endfor %}
-    </select>
-    <label for="only_available">show available books only</label>
-    <input type="checkbox" name="only_available" id="only_available">
-    <br>
-    <input type="submit" value="search">
-</form>
+{% extends 'base.html' %}
+{% block title %}
+    Browse Book
+{% endblock %}
+{% block content %}
+    <form action="/search" method="get">
+        <select name="subject" id="subject">
+            <option value="">all</option>
+            {% for subject in subjects %}
+                <option value="{{ subject }}">{{ subject }}</option>
+            {% endfor %}
+        </select>
+        <label for="only_available">show available books only</label>
+        <input type="checkbox" name="only_available" id="only_available">
+        <br>
+        <input type="submit" value="search">
+    </form>
 
-<div>
-    <table border="1" cellpadding="2" cellspacing="2">
-        <th>Book Title</th>
-        <th>Subject</th>
-        <th>available qty</th>
+    <div>
+        <table border="1" cellpadding="2" cellspacing="2">
+            <th>Book Title</th>
+            <th>Subject</th>
+            <th>available qty</th>
 
-       {% for title, subject, count in results %}
-            <tr>
-                <td>{{ title }}</td>
-                <td>{{ subject }}</td>
-                <td>{{ count }}</td>
-                <td>
-                    <a href="/borrow/{{ title }}">borrow</a>
-                </td>
-            </tr>
-       {% endfor %} 
-    </table>
-</div>
+        {% for title, subject, count in results %}
+                <tr>
+                    <td>{{ title }}</td>
+                    <td>{{ subject }}</td>
+                    <td>{{ count }}</td>
+                    <td>
+                        <a href="/borrow/{{ title }}">borrow</a>
+                    </td>
+                </tr>
+        {% endfor %} 
+        </table>
+    </div>
+{% endblock %}
