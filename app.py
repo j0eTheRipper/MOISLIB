@@ -46,6 +46,7 @@ class Book(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(32), unique=True, index=True)
     book_subject = db.Column(db.String, db.ForeignKey('subjects.subject'))
+    author = db.Column(db.String)
     count = db.Column(db.Integer, default=1)
     borrowed = db.relationship('Borrows', backref='book')
 
@@ -63,7 +64,10 @@ class Borrows(db.Model):
     is_returned = db.Column(db.Boolean, default=False)
 
 
-def add_book(title: str, count=1, subject=None):
+SUBJECTS = [subject.subject for subject in Subjects.query.all()]
+
+
+def add_book(title: str, count=1, subject=None, author=''):
     title = ' '.join(title.split()).title()
     book_exists = Book.query.filter_by(title=title).first()
 
@@ -71,15 +75,18 @@ def add_book(title: str, count=1, subject=None):
         subject = Subjects.query.filter_by(subject=subject).first()
 
         if subject:
-            book = Book(title=title, count=count, subject=subject)
+            book = Book(title=title, count=count, subject=subject, author=author)
+
+            db.session.add(book)
+            db.session.commit()
+
+            return book.id
         else:
             raise SubjectNotFound
 
-        db.session.add(book)
-        db.session.commit()
     else:
         raise BookExists
-
+    
 
 def borrow_book(book: str, name: str, return_date: date, student_class:str, librarian:str):
     book = ' '.join(book.split()).title()
@@ -133,26 +140,22 @@ def home():
 
 @app.route('/add_book')
 def add_book_get():
-    return render_template('add_book.html')
+    return render_template('add_book.html', subjects=SUBJECTS)
 
 
 @app.route('/add_book', methods=['POST'])
 def add_book_post():
     title = request.form.get('title')
     count = int(request.form.get('count'))
-    subject = request.form.get('subject').capitalize()
+    subject = request.form.get('subject')
+    author = request.form.get('author')
     print(subject)
     try:
-        add_book(title, count, subject)
+        new = add_book(title, count, subject, author)
     except BookExists:
         return '<h1>That book is already added</h1>'
-    except SubjectNotFound:
-        subject_record = Subjects(subject=subject)
-        db.session.add(subject_record)
-        db.session.commit()
-        add_book(title, count, subject)
 
-    return redirect(url_for('home', added_book=True))
+    return redirect(url_for('book_search', new=new))
 
 
 @app.route('/borrow/<title>')
@@ -195,11 +198,12 @@ def return_book_post(borrow_id):
 def book_search():
     subject_query = request.args.get('subject')
     show_0 = request.args.get('only_available')
-    subjects_list = Subjects.query.all()
+    new = request.args.get('new')
 
     context = {
-        'subjects': [subject.subject for subject in subjects_list],
+        'subjects': SUBJECTS,
         'results': None,
+        'new': int(new) if new is not None else None,
     }
 
     query = generate_query(show_0, subject_query)
@@ -213,7 +217,7 @@ def book_search():
 def view_borrows():
     filter = request.args.get('returned')
     borrow_id = request.args.get('borrow_id')
-    print(filter)
+    borrow_id = int(borrow_id) if borrow_id is not None else None
     if filter:
         borrows = Borrows.query.filter_by(is_returned=False).all()
     else:
@@ -221,7 +225,7 @@ def view_borrows():
     return render_template('view_borowed.html', borrows=borrows, borrow_id=borrow_id)
 
 def generate_query(show_0, subject_query):
-    query = 'SELECT title, book_subject, count FROM book '
+    query = 'SELECT title, book_subject, count, author, id FROM book '
 
     if subject_query:
         query += f'WHERE book_subject = "{subject_query}" '

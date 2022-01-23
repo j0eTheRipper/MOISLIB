@@ -21,7 +21,11 @@
         <th>Return Date</th>
         <th>Borrow State</th>
         {% for borrow in borrows %}
-        <tr>
+        {% if borrow_id == borrow.id %}
+            <tr id="new">
+        {% else %}
+            <tr>
+        {% endif %}
             <td>{{ borrow.borrower }}</td>
             <td>{{ borrow.borrower_class }}</td>
             <td>{{ borrow.librarian }}</td>

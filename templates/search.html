@@ -20,12 +20,19 @@
         <table border="1" cellpadding="2" cellspacing="2">
             <th>Book Title</th>
             <th>Subject</th>
-            <th>available qty</th>
+            <th>Author</th>
+            <th>Available qty</th>
+            <th>Borrow</th>
 
-        {% for title, subject, count in results %}
-                <tr>
+        {% for title, subject, count, author, id in results %}
+                {% if new == id %}
+                    <tr id="new">
+                {% else %}
+                    <tr>
+                {% endif %}
                     <td>{{ title }}</td>
                     <td>{{ subject }}</td>
+                    <td>{{ author }}</td>
                     <td>{{ count }}</td>
                     <td>
                         <a href="/borrow/{{ title }}">borrow</a>
