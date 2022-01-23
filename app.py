@@ -1,8 +1,5 @@
-from random import choices
 from flask import Flask, render_template, request, url_for, redirect, abort
 from flask_sqlalchemy import SQLAlchemy
-from flask_wtf import FlaskForm
-from wtforms.fields import SelectField, SubmitField
 from os.path import abspath, dirname, join
 from datetime import date
 
