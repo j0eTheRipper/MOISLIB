@@ -1,3 +1,9 @@
 #new {
     background-color: lightgreen;
 }
+.returned {
+    color: green;
+}
+.overdue {
+    background-color: red;
+}
