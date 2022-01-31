@@ -3,11 +3,6 @@
     borrows
 {% endblock %}
 {% block content %}
-    <style>
-        .returned {
-            color: green;
-        }
-    </style>
     {% if borrows %}
     <form action="/view_borrows" method="get">
         <input type="submit" name="returned" value="unreturned">
@@ -31,7 +26,11 @@
             <td>{{ borrow.librarian }}</td>
             <td>{{ borrow.book_title }}</td>
             <td>{{ borrow.borrow_date }}</td>
-            <td>{{ borrow.return_date }}</td>
+            {% if borrow.is_due %}
+                <td class="overdue">{{ borrow.return_date }}</td>
+            {% else %}
+                <td>{{ borrow.return_date }}</td>
+            {% endif %}
             {% if borrow.is_returned %}
                 <td class='returned'><b>Returned</b></td>
             {% else %}

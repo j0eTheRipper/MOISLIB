@@ -1,3 +1,4 @@
+import sqlite3
 from flask import Flask, render_template, request, url_for, redirect, abort
 from flask_sqlalchemy import SQLAlchemy
 from os.path import abspath, dirname, join
@@ -48,6 +49,7 @@ class Book(db.Model):
     book_subject = db.Column(db.String, db.ForeignKey('subjects.subject'))
     author = db.Column(db.String)
     count = db.Column(db.Integer, default=1)
+    total_count = db.Column(db.Integer, default=1)
     borrowed = db.relationship('Borrows', backref='book')
 
 
@@ -62,20 +64,20 @@ class Borrows(db.Model):
     borrow_date = db.Column(db.Date, default=date.today())
     return_date = db.Column(db.Date)
     is_returned = db.Column(db.Boolean, default=False)
+    is_due = db.Column(db.Boolean, default=False)
 
 
-SUBJECTS = [subject.subject for subject in Subjects.query.all()]
 
 
 def add_book(title: str, count=1, subject=None, author=''):
     title = ' '.join(title.split()).title()
-    book_exists = Book.query.filter_by(title=title).first()
+    existing_book = Book.query.filter_by(title=title).first()
 
-    if not book_exists:
+    if not existing_book:
         subject = Subjects.query.filter_by(subject=subject).first()
 
         if subject:
-            book = Book(title=title, count=count, subject=subject, author=author)
+            book = Book(title=title, count=count, total_count=count, subject=subject, author=author)
 
             db.session.add(book)
             db.session.commit()
@@ -83,7 +85,12 @@ def add_book(title: str, count=1, subject=None, author=''):
             return book.id
         else:
             raise SubjectNotFound
-
+    elif existing_book.total_count != count:
+        borrowed_books = len(Borrows.query.filter_by(book_title=existing_book.title).filter_by(is_returned=False).all())
+        existing_book.total_count = count
+        existing_book.count = count - borrowed_books
+        db.session.add(existing_book)
+        db.session.commit()
     else:
         raise BookExists
     
@@ -140,6 +147,7 @@ def home():
 
 @app.route('/add_book')
 def add_book_get():
+    SUBJECTS = [subject.subject for subject in Subjects.query.all()]
     return render_template('add_book.html', subjects=SUBJECTS)
 
 
@@ -149,7 +157,6 @@ def add_book_post():
     count = int(request.form.get('count'))
     subject = request.form.get('subject')
     author = request.form.get('author')
-    print(subject)
     try:
         new = add_book(title, count, subject, author)
     except BookExists:
@@ -201,7 +208,7 @@ def book_search():
     new = request.args.get('new')
 
     context = {
-        'subjects': SUBJECTS,
+        'subjects': [subject.subject for subject in Subjects.query.all()],
         'results': None,
         'new': int(new) if new is not None else None,
     }
@@ -215,13 +222,26 @@ def book_search():
 
 @app.route('/view_borrows')
 def view_borrows():
-    filter = request.args.get('returned')
+    unreturned_filter = request.args.get('returned')
+    # over_due_filter = request.args.get('overdue')
     borrow_id = request.args.get('borrow_id')
     borrow_id = int(borrow_id) if borrow_id is not None else None
-    if filter:
-        borrows = Borrows.query.filter_by(is_returned=False).all()
-    else:
-        borrows = Borrows.query.all()
+
+    unreturned_borrows = Borrows.query.filter_by(is_returned=False).all()
+    borrows = unreturned_borrows if unreturned_filter else Borrows.query.all()
+
+    overdue_books = Borrows.query.filter(Borrows.return_date <= date.today()).filter(Borrows.is_returned == False).all()
+    if overdue_books:
+        new_books = []
+
+        for book in overdue_books:
+            book.is_due = True
+            new_books.append(book)
+        else:
+            db.session.add_all(new_books)
+            db.session.commit()
+
+
     return render_template('view_borowed.html', borrows=borrows, borrow_id=borrow_id)
 
 def generate_query(show_0, subject_query):
