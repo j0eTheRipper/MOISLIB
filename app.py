@@ -1,4 +1,6 @@
 import sqlite3
+
+import sqlalchemy.exc
 from flask import Flask, render_template, request, url_for, redirect, abort
 from flask_sqlalchemy import SQLAlchemy
 from os.path import abspath, dirname, join
@@ -31,7 +33,6 @@ class ReturnFirst(BaseException):
 
 class SubjectNotFound(BaseException):
     pass
-
 
 
 class Subjects(db.Model):
@@ -67,8 +68,6 @@ class Borrows(db.Model):
     is_due = db.Column(db.Boolean, default=False)
 
 
-
-
 def add_book(title: str, count=1, subject=None, author=''):
     title = ' '.join(title.split()).title()
     existing_book = Book.query.filter_by(title=title).first()
@@ -83,8 +82,6 @@ def add_book(title: str, count=1, subject=None, author=''):
             db.session.commit()
 
             return book.id
-        else:
-            raise SubjectNotFound
     elif existing_book.total_count != count:
         borrowed_books = len(Borrows.query.filter_by(book_title=existing_book.title).filter_by(is_returned=False).all())
         existing_book.total_count = count
@@ -139,6 +136,27 @@ def return_book(borrow_id: int):
     db.session.commit()
 
 
+try:
+    SUBJECTS = [subject.subject for subject in Subjects.query.all()]
+except sqlalchemy.exc.OperationalError:
+    db.create_all()
+    subjects_list = {
+        'Stories',
+        'Math',
+        'Physics',
+        'Chemistry',
+        'Biology',
+        'Psychology',
+        'English',
+        'Computer',
+        'general knowledge'
+    }
+    for subject in subjects_list:
+        db.session.add(Subjects(subject=subject))
+
+    db.session.commit()
+
+
 @app.route('/')
 def home():
     obj = request.args
@@ -147,7 +165,6 @@ def home():
 
 @app.route('/add_book')
 def add_book_get():
-    SUBJECTS = [subject.subject for subject in Subjects.query.all()]
     return render_template('add_book.html', subjects=SUBJECTS)
 
 
@@ -189,7 +206,6 @@ def borrow_post():
         return '<h1> Return the book you last borrowed </h1>'
 
 
-
 @app.route('/return/<int:return_id>')
 def return_book_get(return_id):
     return return_book_post(return_id)
@@ -220,7 +236,7 @@ def book_search():
     return render_template('search.html', **context)
 
 
-@app.route('/view_borrows')
+@app.route('/view_borrows/')
 def view_borrows():
     unreturned_filter = request.args.get('returned')
     # over_due_filter = request.args.get('overdue')
@@ -240,9 +256,8 @@ def view_borrows():
         else:
             db.session.add_all(new_books)
             db.session.commit()
-
-
     return render_template('view_borowed.html', borrows=borrows, borrow_id=borrow_id)
+
 
 def generate_query(show_0, subject_query):
     query = 'SELECT title, book_subject, count, author, id FROM book '

@@ -6,7 +6,8 @@
 <h3>Add a new book</h3>
 <form action="/add_book" method="post">
     <input type="text" name="title" id="title" required placeholder="book title"/>
-    <select name="subject">
+    <select name="subject" required>
+        <option value="" selected>Please Select Subject</option>
         {% for subject in subjects %}
             <option value="{{ subject }}">{{ subject }}</option>
         {% endfor %}
